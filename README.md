@@ -1,2 +1,2 @@
-# ma premier modif
-darius
+# gestion etudiant 
+pour gérer une classe 
