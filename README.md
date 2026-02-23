@@ -1,2 +1,3 @@
 # gestion etudiant 
-pour gérer une classe 
+pour gérer chaque salle de classe
+
