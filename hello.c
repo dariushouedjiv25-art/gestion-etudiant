@@ -126,7 +126,7 @@ void ajouter_etudiant(){
 void recherche_etudiant(){
     int index = 0;
     char recherche[30];
-    int T[10];
+    int T[nb_etudiant];
     if(nb_etudiant==0){
         printf("aucun etudiant enregistre\n");
         return;
@@ -282,7 +282,7 @@ void modifier_etudiant(){
                     scanf("%s",saisie);
                     if(ESTNOMBRE(saisie)==0){
                         N = atoi(saisie);
-                        if((N<0)||(N>nbnote)){
+                        if((N<=0)||(N>nbnote)){
                         printf("note incorrespondante\n");
                         }
                         else{
@@ -305,27 +305,29 @@ void modifier_etudiant(){
 
 // CHARGEMENT D'UN FICHIER
 
-void charger_fichier(char nom_fichier[]){
-    FILE *f;
-    f = fopen(nom_fichier,"r");
-    if(!f){
-        printf("Aucun fichier existant, démarrage avec une base vide.\n");
-        return;
+int charger_fichier(char nom_fichier[]){
+    FILE *f = fopen(nom_fichier,"rb");
+    if(f==NULL){
+        printf("aucun fichier trouve\n");
+        return 0;
     }
-    while(fscanf(f,"%s",etudiants[nb_etudiant].nom)==1){
-        etudiants[nb_etudiant].notes = malloc(nbnote * sizeof(float));
-        if(etudiants[nb_etudiant].notes == NULL){
-            printf("Erreur allocation\n");
-            exit(1);
-        }
-        for(int j=0;j<nbnote;j++){
-            fscanf(f,"%f",&etudiants[nb_etudiant].notes[j]);
-        }
-        fscanf(f,"%f",&etudiants[nb_etudiant].moyenne);
-        nb_etudiant++;
+    fread(&MAX,sizeof(int),1,f);
+    fread(&nbnote,sizeof(int),1,f);
+    fread(&faconmoyen,sizeof(int),1,f);
+    fread(&nb_etudiant,sizeof(int),1,f);
+
+    etudiants = (se *)malloc(MAX * sizeof(se));
+
+    for(int i=0;i<nb_etudiant;i++){
+        fread(etudiants[i].nom,sizeof(char),30,f);
+        fread(&etudiants[i].moyenne, sizeof(float), 1, f);
+
+        etudiants[i].notes = malloc(nbnote * sizeof(float));
+        fread(etudiants[i].notes, sizeof(float), nbnote, f);
     }
     fclose(f);
-    printf("fichier charger avec succès\n");
+    printf("fichier charger avec succes\n");
+    return 1;
 }
 
 // SAUVEGARDE RAPIDE
@@ -335,18 +337,19 @@ void sauvegarde_rapide(){
         printf("aucun fichier charger\n");
         return;
     }
-    FILE *f = fopen(nomfichier,"w");
+    FILE *f = fopen(nomfichier,"wb");
     if(!f){
         printf("erreur lors de la sauvegarde\n");
         exit(1);
     }
+    fwrite(&MAX,sizeof(int),1,f);
+    fwrite(&nbnote,sizeof(int),1,f);
+    fwrite(&faconmoyen,sizeof(int),1,f);
+    fwrite(&nb_etudiant,sizeof(int),1,f);
     for(int i=0;i<nb_etudiant;i++){
-        fprintf(f,"%s\n",etudiants[i].nom);
-        for(int j=0;j<nbnote;j++){
-            fprintf(f,"note %d : %.2f\n",j+1,etudiants[i].notes[j]);
-        }
-        fprintf(f,"moyenne : %.2f\n",etudiants[i].moyenne);
-        fprintf(f,"----------------------\n");
+        fwrite(etudiants[i].nom, sizeof(char), 30, f);
+        fwrite(&etudiants[i].moyenne, sizeof(float), 1, f);
+        fwrite(etudiants[i].notes, sizeof(float), nbnote, f);
     }
     fclose(f);
     printf("fichier sauvegarder avec succes\n");
@@ -356,9 +359,9 @@ void sauvegarde_rapide(){
 
 void sauvegarde(){
     int choix=2;
-    printf("entrer le nom du fichier (avec l'extention .txt)\n");
+    printf("entrer le nom du fichier\n");
     scanf("%s",nomfichier);
-    FILE *test = fopen(nomfichier,"r");
+    FILE *test = fopen(nomfichier,"rb");
     if(test==NULL){
         sauvegarde_rapide();
         return;
@@ -371,18 +374,19 @@ void sauvegarde(){
             switch(choix){
                 case 1: sauvegarde_rapide();break;
                 case 0:{
-                    FILE *f = fopen(nomfichier,"a");
+                    FILE *f = fopen(nomfichier,"ab");
                     if(!f){
                         printf("erreur lors de la sauvegarde\n");
-                        exit(1);
+                        return;
                     }
+                    fwrite(&MAX,sizeof(int),1,f);
+                    fwrite(&nbnote,sizeof(int),1,f);
+                    fwrite(&faconmoyen,sizeof(int),1,f);
+                    fwrite(&nb_etudiant,sizeof(int),1,f);
                     for(int i=0;i<nb_etudiant;i++){
-                        fprintf(f,"%s\n",etudiants[i].nom);
-                        for(int j=0;j<nbnote;j++){
-                            fprintf(f,"note %d : %.2f\n",j+1,etudiants[i].notes[j]);
-                        }
-                        fprintf(f,"moyenne : %.2f\n",etudiants[i].moyenne);
-                        fprintf(f,"----------------------\n");
+                        fwrite(etudiants[i].nom, sizeof(char), 30, f);
+                        fwrite(&etudiants[i].moyenne, sizeof(float), 1, f);
+                        fwrite(etudiants[i].notes, sizeof(float), nbnote, f);
                     }
                     fclose(f);
                     break;
@@ -400,29 +404,52 @@ int main()
 {
     char saisie[30];
     int choix;
+    int choix1;
+    int succes;
     do{
-        printf("combien d'etudiant vous voulez gerer en tout ?\n");
-        scanf("%s",saisie);
-    }while(ESTNOMBRE(saisie));
-    MAX = atoi(saisie);
-    etudiants = (se *)malloc(MAX * sizeof(se));
-    if(etudiants==NULL){
-        printf("erreur lors de l'allocation de la memoire");
-        return 1;
-    }
 
-    do{
-        printf("combien de note par etudiant ?\n");
-        scanf("%s",saisie);
-    }while(ESTNOMBRE(saisie));
-    nbnote = atoi(saisie);
+        printf("que voulez vous faire ?:\n");
+        printf("1-nouvelle classe\n");
+        printf("2-classe deja enregistre(charger un fichier)\n");
+        scanf("%d",&choix1);
+        if(choix1==2){
+            do{
+                printf("entrer le nom du fichier a charger\n");
+                scanf("%s",nomfichier);
+                succes = charger_fichier(nomfichier);
+                if(succes==0){
+                    printf("1-nouvelle classe ?\n");
+                    printf("2-reessayer\n");
+                    scanf("%d",&choix1);
+                }
+            }while((succes==0)&&(choix1==2));
+        }
+        if(choix1==1){
+            do{
+                printf("combien d'etudiant vous voulez gerer en tout ?\n");
+                scanf("%s",saisie);
+            }while(ESTNOMBRE(saisie));
+            MAX = atoi(saisie);
+            etudiants = (se *)malloc(MAX * sizeof(se));
+            if(etudiants==NULL){
+                printf("erreur lors de l'allocation de la memoire");
+                return 1;
+            }
 
-    do{
-        printf("comment souhaitez vous calculer la moyenne ?\n");
-        printf("1-moyenne classique\n");
-        printf("2-moyenne 40-60\n");
-        scanf("%d",&faconmoyen);
-    }while((faconmoyen!=1)&&(faconmoyen!=2));
+            do{
+                printf("combien de note par etudiant ?\n");
+                scanf("%s",saisie);
+            }while(ESTNOMBRE(saisie));
+            nbnote = atoi(saisie);
+
+            do{
+                printf("comment souhaitez vous calculer la moyenne ?\n");
+                printf("1-moyenne classique\n");
+                printf("2-moyenne 40-60\n");
+                scanf("%d",&faconmoyen);
+            }while((faconmoyen!=1)&&(faconmoyen!=2));
+        }
+    }while((choix1!=1)&&(choix1!=2));
 
     do {
         printf("\n===== MENU =====\n");
@@ -433,9 +460,8 @@ int main()
         printf("5. Trier par moyenne\n");
         printf("6. modifier les infos d'un etudiant\n");
         printf("7. supprimer un etudiant\n");
-        printf("8. charger un fichier\n");
-        printf("9. sauvergarde rapide dans le fichier charger\n");
-        printf("10. sauvergarder dans un fichier\n");
+        printf("8. sauvergarde rapide dans le fichier charger\n");
+        printf("9. sauvergarder dans un fichier\n");
         printf("0. Quitter\n");
         printf("Votre choix : ");
         scanf("%d", &choix);
@@ -448,16 +474,15 @@ int main()
             case 5: trie_tableau(); break;
             case 6: modifier_etudiant();break;
             case 7: supprimer_etudiant();break;
-            case 8: {
-                    printf("entrer le nom du fichier que vous voullez charger\n");
-                    scanf("%s",nomfichier);
-                    charger_fichier(nomfichier);break;
-            }
-            case 9: sauvegarde_rapide();break;
-            case 10: sauvegarde();break;
+            case 8: sauvegarde_rapide();break;
+            case 9: sauvegarde();break;
             case 0: printf("Au revoir !\n"); break;
             default: printf("Choix invalide.\n");
         }
 
     } while (choix != 0);
+    for(int i=0;i<nb_etudiant;i++){
+        free(etudiants[i].notes);
+    }
+    free(etudiants);
 }
