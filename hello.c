@@ -493,4 +493,5 @@ int main() {
     free(etudiants[i].notes);
   }
   free(etudiants);
+  // j'essaie le pull
 }
